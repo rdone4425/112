@@ -5,6 +5,7 @@ from datetime import datetime
 import re
 import requests
 from bs4 import BeautifulSoup
+from git.search_widget import SearchWidget
 
 class GitHubSearchWidget(QtWidgets.QWidget):
     search_completed = QtCore.pyqtSignal(list)
@@ -135,9 +136,35 @@ def show_github_search_dialog(parent):
     dialog = GitHubSearchDialog(parent)
     dialog.exec()
 
-def github_search(query):
+def github_search(query, token):
     url = "https://api.github.com/search/repositories"
-    headers = {"Authorization": f"token {your_github_token}"}
+    headers = {"Authorization": f"token {token}"}
     params = {"q": query}
     response = requests.get(url, headers=headers, params=params)
     # ...
+
+class GitHubSearchDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None, token=None):
+        super().__init__(parent)
+        self.token = token
+        self.setWindowTitle("GitHub 搜索")
+        layout = QtWidgets.QVBoxLayout(self)
+        
+        self.search_widget = SearchWidget()
+        layout.addWidget(self.search_widget)
+        
+        self.results_list = QtWidgets.QListWidget()
+        layout.addWidget(self.results_list)
+        
+        close_button = QtWidgets.QPushButton("关闭")
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
+        
+        self.search_widget.search_completed.connect(self.display_results)
+    
+    def display_results(self, results):
+        self.results_list.clear()
+        for repo in results:
+            self.results_list.addItem(repo['full_name'])
+
+# 确保其他必要的函数和类（如 SearchWidget）也在这个文件中定义
