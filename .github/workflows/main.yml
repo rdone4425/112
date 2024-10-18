@@ -41,14 +41,11 @@ jobs:
         prerelease: false
     
     - name: 上传 Release 资产
-      uses: actions/upload-release-asset@v1
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./dist/main.exe
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/main.exe
-        asset_name: Git-Client.exe
-        asset_content_type: application/vnd.microsoft.portable-executable
     
     - name: 输出 Release URL
       run: |
