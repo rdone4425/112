@@ -27,7 +27,7 @@ jobs:
         pip install pyinstaller
     
     - name: Build EXE
-      run: pyinstaller --onefile --windowed git/main.py
+      run: pyinstaller --onefile --windowed --add-data "data:data" git/main.py
     
     - name: Create Release
       id: create_release
@@ -49,3 +49,8 @@ jobs:
         asset_path: ./dist/main.exe
         asset_name: Git-Client.exe
         asset_content_type: application/vnd.microsoft.portable-executable
+    
+    - name: Output Release URL
+      run: |
+        echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}"
+      shell: bash
