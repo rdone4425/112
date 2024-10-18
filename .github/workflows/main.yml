@@ -31,7 +31,7 @@ jobs:
     
     - name: 创建 Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: actions/create-release@v2
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
