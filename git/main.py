@@ -12,9 +12,10 @@ from PyQt6 import QtWidgets, QtGui, QtCore
 from git.token_tab import TokenTab
 from git.repository_tab import RepositoryTab
 from git.search_widget import SearchWidget
-from git.github_search import search_github, create_repo_widget
+from git.github_search import GitHubSearchDialog, search_github, create_repo_widget
 import aiohttp
 from datetime import datetime
+from git.log_tab import LogTab
 
 # 临时创建占位类
 class PlaceholderTab(QtWidgets.QWidget):
@@ -63,7 +64,7 @@ class HomeTab(QtWidgets.QWidget):
                 background-color: #f0f0f0;
             }
         """)
-        self.search_results_scroll.setVisible(False)  # 初始时隐藏搜索结果区域
+        self.search_results_scroll.setVisible(False)  # 初始时隐藏搜索果区域
 
         self.search_results_widget = QtWidgets.QWidget()
         self.search_results_layout = QtWidgets.QVBoxLayout(self.search_results_widget)
@@ -208,7 +209,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setGeometry(100, 100, 1000, 600)
         
         # 设置应用程序的字体
-        self.setFont(QtGui.QFont("微软雅黑", 10))
+        self.setFont(QtGui.QFont("微雅黑", 10))
         
         # 创建中心部件
         self.central_widget = QtWidgets.QWidget()
@@ -223,9 +224,9 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 添加选项卡
         self.home_tab = HomeTab(self)
-        self.repository_tab = RepositoryTab()
-        self.token_tab = TokenTab()
-        self.log_tab = PlaceholderTab("日志")
+        self.repository_tab = RepositoryTab(self)  # 传入 self 作为 main_window 参数
+        self.token_tab = TokenTab(self)  # 传入 self 作为 main_window 参数
+        self.log_tab = LogTab()
         
         self.tab_widget.addTab(self.home_tab, "主页")
         self.tab_widget.addTab(self.repository_tab, "仓库")
@@ -255,8 +256,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # 添加这些连接
         self.token_tab.username_updated.connect(self.update_repository_username)
 
+        # 创建 data 目录
+        self.data_dir = os.path.join(os.getcwd(), 'data')
+        os.makedirs(self.data_dir, exist_ok=True)
+
     def search_local_repos(self, search_text):
-        self.tab_widget.setCurrentIndex(1)  # 切换到仓库标签页
+        self.tab_widget.setCurrentIndex(1)  # 换到仓库标签页
         self.repository_tab.filter_repos(search_text, "全")
 
     def search_github(self, search_text):
@@ -367,6 +372,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_repository_username(self, username):
         self.repository_tab.current_username = username
         self.repository_tab.current_token = self.token_tab.current_token  # 添加这行
+
+    def log_message(self, message):
+        self.log_tab.add_log(message)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
