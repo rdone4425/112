@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: write
+      contents: write  # 这给予了创建 release 的权限
     
     steps:
     - uses: actions/checkout@v3
@@ -33,7 +33,7 @@ jobs:
       id: create_release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
       with:
         tag_name: v${{ github.run_number }}
         release_name: Release ${{ github.run_number }}
@@ -43,7 +43,7 @@ jobs:
     - name: 上传 Release 资产
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./dist/main.exe
