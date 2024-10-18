@@ -1,7 +1,13 @@
+import sys
+import site
+sys.path.extend(site.getsitepackages())
+
 import json
 import asyncio
 from PyQt6 import QtWidgets, QtCore
 import aiohttp
+import os
+from cryptography.fernet import Fernet
 
 class TokenTab(QtWidgets.QWidget):
     token_updated = QtCore.pyqtSignal(str)  # 修改信号以传递当前选中的token
@@ -9,14 +15,25 @@ class TokenTab(QtWidgets.QWidget):
     username_updated = QtCore.pyqtSignal(str)  # 新增信号
     login_requested = QtCore.pyqtSignal(str)  # 新增信号
 
-    def __init__(self):
+    def __init__(self, main_window):
         super().__init__()
+        self.main_window = main_window
         self.tokens = []
         self.current_token = None
         self.current_username = None
+        
+        # 创建 data/json 目录
+        self.data_dir = os.path.join(os.getcwd(), 'data')
+        self.json_dir = os.path.join(self.data_dir, 'json')
+        os.makedirs(self.json_dir, exist_ok=True)
+        
+        # 确保在这里初始化 tokens_file
+        self.tokens_file = os.path.join(self.json_dir, 'tokens.json')
+        
         self.init_ui()
         self.load_tokens()
         self.login_requested.connect(self.login_async)
+        self.load_saved_token()
 
     def init_ui(self):
         layout = QtWidgets.QVBoxLayout()
@@ -54,37 +71,69 @@ class TokenTab(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def load_tokens(self):
-        try:
-            with open('git/tokens.json', 'r') as f:
-                self.tokens = json.load(f)
+        if not os.path.exists(self.tokens_file):
+            with open(self.tokens_file, 'w') as f:
+                json.dump([], f)
+            self.tokens = []
+        else:
+            try:
+                with open(self.tokens_file, 'r') as f:
+                    self.tokens = json.load(f)
                 self.update_token_list()
                 if self.tokens:
-                    self.current_token = self.tokens[-1]  # 使用最后一个 token
+                    self.current_token = self.tokens[-1]
                     self.login_requested.emit(self.current_token)
-        except FileNotFoundError:
-            pass
+            except json.JSONDecodeError:
+                self.tokens = []
+                self.save_tokens()  # 如果文件损坏，重新创建
 
     def save_tokens(self):
         try:
-            with open('git/tokens.json', 'w') as f:
+            with open(self.tokens_file, 'w') as f:
                 json.dump(self.tokens, f)
         except IOError as e:
             QtWidgets.QMessageBox.warning(self, "错误", f"保存令牌时出错：{str(e)}")
 
+    def load_saved_token(self):
+        try:
+            with open('key.bin', 'rb') as f:
+                key = f.read()
+            with open('encrypted_token.bin', 'rb') as f:
+                encrypted_token = f.read()
+            fernet = Fernet(key)
+            decrypted_token = fernet.decrypt(encrypted_token).decode()
+            self.current_token = decrypted_token
+            self.login_requested.emit(self.current_token)
+        except FileNotFoundError:
+            pass  # 保存的 token
+
+    def save_token(self, token):
+        key = Fernet.generate_key()
+        fernet = Fernet(key)
+        encrypted_token = fernet.encrypt(token.encode())
+        with open('encrypted_token.bin', 'wb') as f:
+            f.write(encrypted_token)
+        with open('key.bin', 'wb') as f:
+            f.write(key)
+
     def add_token(self):
         token = self.token_input.text().strip()
         if token and token not in self.tokens:
-            if len(token) >= 8:  # 假设令牌至少应该有8个字符
+            if len(token) >= 8:
                 self.tokens.append(token)
                 self.update_token_list()
                 self.save_tokens()
                 self.token_input.clear()
+                self.save_token(token)
                 QtWidgets.QMessageBox.information(self, "成功", f"成功添加新token。当前共有 {len(self.tokens)} 个token。")
-                self.login_requested.emit(token)  # 发射信号而不是直接调用异步方
+                self.login_requested.emit(token)
+                self.main_window.log_message(f"添加新 token：{token[:4]}...{token[-4:]}")  # 修改这行
             else:
                 QtWidgets.QMessageBox.warning(self, "无效的令牌", "令牌长度应至少为8个字符。")
+                self.main_window.log_message("尝试添加无效的 token")  # 修改这行
         elif token in self.tokens:
             QtWidgets.QMessageBox.warning(self, "重复的令牌", "此令牌已存在，请勿重复添加。")
+            self.main_window.log_message("尝试添加重复的 token")  # 修改这行
 
     def remove_token(self, item):
         reply = QtWidgets.QMessageBox.question(self, '确认', '是否确定删除此token？',
@@ -150,7 +199,8 @@ class TokenTab(QtWidgets.QWidget):
             self.login_status_label.setText(f"已登录: {username}")
             self.login_status_updated.emit(self.current_token, True)
             self.username_updated.emit(username)
-            self.token_updated.emit(self.current_token)  # 添加这行
+            self.token_updated.emit(self.current_token)
+            self.save_token(self.current_token)  # 保存成功登录的 token
         else:
             self.login_status_label.setText("登录失败")
             self.login_status_updated.emit(self.current_token, False)
