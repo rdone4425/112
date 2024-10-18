@@ -16,8 +16,9 @@ class RepositoryTab(QtWidgets.QWidget):
     update_repo_list_signal = QtCore.pyqtSignal(list)
     add_repo_widget_signal = QtCore.pyqtSignal(dict)
 
-    def __init__(self):
+    def __init__(self, main_window):
         super().__init__()
+        self.main_window = main_window
         self.current_username = None
         self.current_token = None
         self.selected_repo = None
@@ -103,10 +104,10 @@ class RepositoryTab(QtWidgets.QWidget):
         self.clone_button.clicked.connect(self.clone_selected_repo)
         button_layout.addWidget(self.clone_button)
 
-        # 添加 GitHub 搜索按钮
-        self.github_search_button = QtWidgets.QPushButton("搜索 GitHub")
-        self.github_search_button.clicked.connect(self.open_github_search)
-        button_layout.addWidget(self.github_search_button)
+        # 移除 GitHub 搜索按钮
+        # self.github_search_button = QtWidgets.QPushButton("搜索 GitHub")
+        # self.github_search_button.clicked.connect(self.open_github_search)
+        # button_layout.addWidget(self.github_search_button)
 
         layout.addLayout(button_layout)
 
@@ -128,8 +129,10 @@ class RepositoryTab(QtWidgets.QWidget):
             asyncio.get_event_loop().call_soon_threadsafe(
                 lambda: asyncio.create_task(self.fetch_all_repos_async(self.current_token))
             )
+            self.main_window.log_message("开始刷新仓库列表")  # 修改这行
         else:
             QtWidgets.QMessageBox.warning(self, "错误", "请先登录")
+            self.main_window.log_message("尝试刷新仓库列表失败：未登录")  # 修改这行
 
     def _update_repo_list(self, repos):
         print(f"开始更新仓库列表，共 {len(repos)} 个仓库")
@@ -291,7 +294,7 @@ class RepositoryTab(QtWidgets.QWidget):
 
     def create_new_repo(self):
         if not self.current_token:
-            QtWidgets.QMessageBox.warning(self, "错误", "请先登录")
+            QtWidgets.QMessageBox.warning(self, "错", "请先登录")
             return
 
         dialog = NewRepoDialog(self)
@@ -358,7 +361,7 @@ class RepositoryTab(QtWidgets.QWidget):
         
         msg_box = QtWidgets.QMessageBox(self)
         msg_box.setWindowTitle('确认删除')
-        msg_box.setText(f'您确定要删除仓库 "{self.selected_repo}" 吗？\n此操作不可逆！')
+        msg_box.setText(f'您确定要删除仓库 "{self.selected_repo}" 吗？\n此操作不可逆')
         msg_box.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
         msg_box.setDefaultButton(QtWidgets.QMessageBox.StandardButton.No)
         
@@ -635,9 +638,10 @@ class RepositoryTab(QtWidgets.QWidget):
             self.progress_dialog.close()
             self.progress_dialog = None
 
-    def open_github_search(self):
-        from .github_search import show_github_search_dialog
-        show_github_search_dialog(self)
+    # 移除 open_github_search 方法
+    # def open_github_search(self):
+    #     from .github_search import show_github_search_dialog
+    #     show_github_search_dialog(self)
 
 class NewRepoDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
