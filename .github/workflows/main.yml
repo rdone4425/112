@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    permissions:
-      contents: write  # 这给予了创建 release 的权限
     
     steps:
     - uses: actions/checkout@v3
@@ -26,14 +24,23 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
     
+    - name: 运行测试
+      run: python -m unittest discover tests
+    
     - name: 构建可执行文件
       run: pyinstaller --onefile --windowed --add-data "data:data" git/main.py
     
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v3
+      with:
+        name: Git-Client
+        path: dist/main.exe
+    
     - name: 创建 Release
       id: create_release
-      uses: actions/create-release@v2
+      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ github.run_number }}
         release_name: Release ${{ github.run_number }}
@@ -41,13 +48,11 @@ jobs:
         prerelease: false
     
     - name: 上传 Release 资产
-      uses: softprops/action-gh-release@v1
-      with:
-        files: ./dist/main.exe
+      uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ github.token }}
-    
-    - name: 输出 Release URL
-      run: |
-        echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}"
-      shell: bash
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/main.exe
+        asset_name: Git-Client.exe
+        asset_content_type: application/vnd.microsoft.portable-executable
