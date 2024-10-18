@@ -1,4 +1,4 @@
-name: Build and Release
+name: 构建和发布
 
 on:
   push:
@@ -15,21 +15,21 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
+    - name: 设置 Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     
-    - name: Install dependencies
+    - name: 安装依赖
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
     
-    - name: Build EXE
+    - name: 构建可执行文件
       run: pyinstaller --onefile --windowed --add-data "data:data" git/main.py
     
-    - name: Create Release
+    - name: 创建 Release
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -40,7 +40,7 @@ jobs:
         draft: false
         prerelease: false
     
-    - name: Upload Release Asset
+    - name: 上传 Release 资产
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -50,7 +50,7 @@ jobs:
         asset_name: Git-Client.exe
         asset_content_type: application/vnd.microsoft.portable-executable
     
-    - name: Output Release URL
+    - name: 输出 Release URL
       run: |
         echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}"
       shell: bash
