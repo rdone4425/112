@@ -2,3 +2,4 @@ PyQt6
 aiohttp
 requests
 beautifulsoup4
+cryptography
